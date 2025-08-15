@@ -9,6 +9,7 @@ import Loader from "../components/Loader";
 export default function App() {
   const [selectedDoc, setSelectedDoc] = useState(null); // { id, filename }
   const [processing, setProcessing] = useState(false);
+  const [reloadDocs, setReloadDocs] = useState(0); // triggers document list refresh
 
   return (
     <div className="app-container">
@@ -19,13 +20,19 @@ export default function App() {
       <div className="layout">
         <aside className="left-col">
           <DocumentUpload
-            onUploadComplete={(doc) => setSelectedDoc(doc)}
+            onUploadComplete={(doc) => {
+              setReloadDocs((r) => r + 1); // refresh document list
+              if (doc?.doc_id) {
+                setSelectedDoc({ id: doc.doc_id, filename: doc.filename });
+              }
+            }}
             setProcessing={setProcessing}
           />
           <hr />
           <DocumentList
             onSelect={(doc) => setSelectedDoc(doc)}
             selected={selectedDoc}
+            reloadTrigger={reloadDocs}
           />
         </aside>
 
@@ -43,7 +50,7 @@ export default function App() {
                   <SummaryView docId={selectedDoc.id} />
                 </div>
                 <div className="card">
-                  <QASection docId={selectedDoc.id} />
+                  <QASection selectedDoc={selectedDoc} />
                 </div>
                 <div className="card flowchart-card">
                   <FlowchartView docId={selectedDoc.id} />

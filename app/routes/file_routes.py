@@ -11,8 +11,8 @@ router = APIRouter()
 @router.post("/upload/")
 async def upload_file(
     file: UploadFile = File(...),
-    extract: bool = Query(False, description="If true, extract text"),
-    save_to_db: bool = Query(False, description="If true, save doc & text to DB")
+    extract: bool = Query(True, description="If true, extract text"),
+    save_to_db: bool = Query(True, description="If true, save doc & text to DB")
 ):
     """
     Upload a file, optionally extract text and/or save to DB.

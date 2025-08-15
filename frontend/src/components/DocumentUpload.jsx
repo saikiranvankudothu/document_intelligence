@@ -11,14 +11,16 @@ export default function DocumentUpload({ onUploadComplete, setProcessing }) {
       return;
     }
     setLoading(true);
+    setProcessing(true);
     try {
-      await uploadDocument(file);
-      if (onUploadComplete) onUploadComplete();
+      const result = await uploadDocument(file);
+      if (onUploadComplete) onUploadComplete(result); // pass doc info to App
     } catch (error) {
       console.error("Upload failed", error);
       alert("Failed to upload document");
     } finally {
       setLoading(false);
+      setProcessing(false);
     }
   };
 

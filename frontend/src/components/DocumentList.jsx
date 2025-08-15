@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { getDocuments } from "../api/backend";
 
-export default function DocumentList({ onSelect, selected }) {
+export default function DocumentList({ onSelect, selected, reloadTrigger }) {
   const [docs, setDocs] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -19,7 +19,7 @@ export default function DocumentList({ onSelect, selected }) {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [reloadTrigger]); // reload when trigger changes
 
   return (
     <div>
