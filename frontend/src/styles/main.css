@@ -1,0 +1,108 @@
+:root {
+  --bg: #f7fafc;
+  --card: #ffffff;
+  --accent: #2563eb;
+  --muted: #6b7280;
+}
+
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: Inter, system-ui, Arial;
+  background: var(--bg);
+  color: #111827;
+}
+.app-header {
+  padding: 16px 24px;
+  background: white;
+  box-shadow: 0 1px 4px rgba(16, 24, 40, 0.06);
+}
+.app-header h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.layout {
+  display: flex;
+  gap: 16px;
+  padding: 20px;
+}
+.left-col {
+  width: 280px;
+  background: transparent;
+}
+.main-col {
+  flex: 1;
+}
+
+.card {
+  background: var(--card);
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 1px 4px rgba(16, 24, 40, 0.04);
+  margin-bottom: 12px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.flowchart-card {
+  grid-column: span 2;
+  min-height: 320px;
+}
+
+input[type="file"] {
+  display: block;
+  margin-bottom: 8px;
+}
+button {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.document-item {
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.document-item:hover {
+  background: rgba(37, 99, 235, 0.06);
+}
+.document-item.selected {
+  background: rgba(37, 99, 235, 0.12);
+}
+
+.loader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 3px solid rgba(0, 0, 0, 0.08);
+  border-left-color: var(--accent);
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.small-muted {
+  color: var(--muted);
+  font-size: 13px;
+}

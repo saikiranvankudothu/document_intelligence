@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Document Flowchart</title>
+    <script src="/static/js/mermaid.min.js"></script>
+    <style>
+      #chart {
+        width: 100%;
+        height: auto;
+        padding: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Document Flowchart</h1>
+    <div class="mermaid" id="chart"></div>
+
+    <script>
+      mermaid.initialize({ startOnLoad: true });
+
+      async function loadChart() {
+        const res = await fetch("/visualization/mermaid", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: "Sample Document",
+            sections: [
+              { heading: "Intro", subsections: [] },
+              {
+                heading: "Chapter 1",
+                subsections: [{ heading: "Section 1.1", subsections: [] }],
+              },
+            ],
+          }),
+        });
+        const data = await res.json();
+        document.getElementById("chart").innerHTML = data.mermaid;
+        mermaid.init(undefined, document.querySelectorAll(".mermaid"));
+      }
+
+      loadChart();
+    </script>
+  </body>
+</html>

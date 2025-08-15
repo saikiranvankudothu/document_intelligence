@@ -1,0 +1,20 @@
+fastapi
+uvicorn
+python-multipart
+PyMuPDF
+python-docx
+pytesseract
+pdfminer.six
+Pillow
+numpy
+scikit-learn
+hdbscan
+sentence-transformers
+SQLAlchemy
+pydantic
+transformers>=4.30.0
+torch>=1.13.0            # CPU or GPU build depending on your environment
+sentence-transformers
+faiss-cpu               # or faiss-gpu if you have CUDA and want GPU acceleration
+accelerate              # helpful for larger models
+pandas                  # small helper for metadata
