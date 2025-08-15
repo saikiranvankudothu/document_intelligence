@@ -27,7 +27,7 @@ def summarize_text(text: str, max_length: int = 150, min_length: int = 30) -> st
     """
     summarizer = get_summarizer()
     # pipeline will handle long text according to model; for very large docs consider manual chunking
-    out = summarizer(text, max_length=max_length, min_length=min_length, do_sample=False, clean_up_tokenization_spaces=True)
+    out = summarizer(text, max_new_tokens=max_length, min_length=min_length, do_sample=False, clean_up_tokenization_spaces=True)
     return out[0]["summary_text"]
 
 def summarize_sections(sections: List[dict], per_section_max: int = 120) -> List[dict]:
@@ -55,7 +55,7 @@ def summarize_sections(sections: List[dict], per_section_max: int = 120) -> List
     if batch_texts:
         raw_summaries = summarizer(
             batch_texts,
-            max_length=per_section_max,
+            max_new_tokens=per_section_max,
             min_length=30,
             do_sample=False,
             clean_up_tokenization_spaces=True

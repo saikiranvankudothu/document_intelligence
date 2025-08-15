@@ -5,11 +5,12 @@ def hierarchy_to_mermaid(hierarchy_json: dict) -> str:
     """
     Convert document hierarchy JSON into Mermaid.js graph format.
     Handles duplicate section titles by generating unique IDs.
+    Works with sections_to_json() output (title/children keys).
     """
     mermaid = ["graph TD"]
 
     def make_id(text, path):
-        # Create unique ID from path hash
+        import hashlib
         hash_part = hashlib.md5(path.encode()).hexdigest()[:6]
         return f"N_{hash_part}"
 
@@ -20,12 +21,13 @@ def hierarchy_to_mermaid(hierarchy_json: dict) -> str:
         return node_id
 
     def process_section(section, parent_path="", parent_id=None):
-        current_path = f"{parent_path}/{section['heading']}"
-        node_id = add_node(section["heading"], current_path)
+        title = section.get("title", "Untitled")
+        current_path = f"{parent_path}/{title}"
+        node_id = add_node(title, current_path)
         if parent_id:
             mermaid.append(f"{parent_id} --> {node_id}")
-        for idx, sub in enumerate(section.get("subsections", [])):
-            process_section(sub, current_path, node_id)
+        for child in section.get("children", []):
+            process_section(child, current_path, node_id)
 
     root_id = add_node(hierarchy_json["title"], hierarchy_json["title"])
     for section in hierarchy_json.get("sections", []):

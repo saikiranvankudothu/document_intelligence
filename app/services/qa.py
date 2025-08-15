@@ -7,16 +7,30 @@ import torch
 import os
 
 # generator model — can be same as summarizer model or another generator model you fine-tuned.
-GEN_MODEL = os.environ.get("GEN_MODEL", os.environ.get("SUMMARIZER_MODEL", "google/flan-t5-base"))
-DEVICE = 0 if torch.cuda.is_available() else -1
+GEN_MODEL = os.environ.get("GEN_MODEL", "google/flan-t5-base")
+DEVICE = 0 if torch.cuda.is_available() else "cpu"  # pipeline accepts "cpu" directly
 
 _generator = None
 
 def get_generator():
     global _generator
     if _generator is None:
-        _generator = pipeline("text2text-generation", model=GEN_MODEL, device=DEVICE)
+        print(f"Loading QnA model {GEN_MODEL} on {DEVICE}...")
+        # Force-load model + tokenizer on CPU
+        model = AutoModelForSeq2SeqLM.from_pretrained(
+            GEN_MODEL,
+            torch_dtype=torch.float32,
+            device_map=None
+        ).to("cpu")
+        tokenizer = AutoTokenizer.from_pretrained(GEN_MODEL)
+        _generator = pipeline(
+            "text2text-generation",
+            model=model,
+            tokenizer=tokenizer,
+            device=-1  # force CPU for pipeline
+        )
     return _generator
+
 
 def retrieve_and_answer(query: str, top_k: int = 5, max_input_len: int = 1000) -> Dict[str, Any]:
     """
@@ -46,6 +60,6 @@ def retrieve_and_answer(query: str, top_k: int = 5, max_input_len: int = 1000) -
 
     prompt = f"Context:\n{context_joined}\n\nQuestion: {query}\nAnswer concisely:"
     gen = get_generator()
-    out = gen(prompt, max_length=256, do_sample=False)
+    out = gen(prompt, max_new_tokens=256, do_sample=False)
     answer = out[0]["generated_text"]
     return {"answer": answer, "sources": sources}

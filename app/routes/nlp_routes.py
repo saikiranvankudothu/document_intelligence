@@ -104,7 +104,16 @@ def get_summary(doc_id: int):
             raise HTTPException(status_code=404, detail="Document not found")
         if not doc.text:
             raise HTTPException(status_code=400, detail="Document has no text")
-        summary = summarize_text(doc.text, max_length=200, min_length=30)
+
+        text = doc.text.strip()
+        max_chunk_size = 1500  # chars per chunk for summarization
+        if len(text) > max_chunk_size:
+            chunks = [text[i:i+max_chunk_size] for i in range(0, len(text), max_chunk_size)]
+            summaries = [summarize_text(c, max_length=500, min_length=50) for c in chunks]
+            summary = " ".join(summaries)
+        else:
+            summary = summarize_text(text, max_length=500, min_length=50)
+
         return {"summary": summary}
     finally:
         db.close()
@@ -126,5 +135,54 @@ def get_flowchart(doc_id: int):
         hierarchy = {"title": doc.filename, "sections": sections_to_json(nodes)}
         mermaid_code = hierarchy_to_mermaid(hierarchy)
         return {"mermaid": mermaid_code}
+    finally:
+        db.close()
+
+from fastapi import status
+from app.services.embeddings_store import _metadata, save_index, _init_index
+import faiss
+
+@router.delete("/documents/{doc_id}", status_code=status.HTTP_200_OK)
+def delete_document(doc_id: int):
+    db = SessionLocal()
+    try:
+        # Get document
+        doc = db.query(Document).filter(Document.id == doc_id).first()
+        if not doc:
+            raise HTTPException(status_code=404, detail="Document not found")
+
+        # Remove file from uploads folder
+        if doc.original_path and os.path.exists(doc.original_path):
+            os.remove(doc.original_path)
+
+        # Remove embeddings related to this doc_id
+        _init_index(384)  # Assuming MiniLM 384-dim; adjust if needed
+        ids_to_remove = [idx for idx, md in _metadata.items() if md.get("doc_id") == doc_id]
+        if ids_to_remove:
+            # Create a mask for vectors to keep
+            total_ids = list(range(len(_metadata)))
+            keep_ids = [i for i in total_ids if i not in ids_to_remove]
+            if keep_ids:
+                new_index = faiss.IndexFlatIP(_index.d)
+                new_metadata = {}
+                vectors = faiss.vector_to_array(_index.xb).reshape(-1, _index.d)
+                for new_id, old_id in enumerate(keep_ids):
+                    new_index.add(vectors[old_id:old_id+1])
+                    new_metadata[new_id] = _metadata[old_id]
+                _index.reset()
+                _index.add(new_index.reconstruct_n(0, len(keep_ids)))
+                _metadata.clear()
+                _metadata.update(new_metadata)
+                save_index()
+            else:
+                # No embeddings remain → clear store
+                from app.services.embeddings_store import clear_store
+                clear_store()
+
+        # Delete document from DB
+        db.delete(doc)
+        db.commit()
+
+        return {"deleted": True, "doc_id": doc_id}
     finally:
         db.close()
