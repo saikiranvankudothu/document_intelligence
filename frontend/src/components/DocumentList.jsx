@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getDocuments } from "../api/documentApi";
+import { getDocuments } from "../api/backend";
 
 export default function DocumentList({ onSelect, selected }) {
   const [docs, setDocs] = useState([]);

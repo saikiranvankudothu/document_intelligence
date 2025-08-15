@@ -32,17 +32,45 @@ def summarize_text(text: str, max_length: int = 150, min_length: int = 30) -> st
 
 def summarize_sections(sections: List[dict], per_section_max: int = 120) -> List[dict]:
     """
-    sections: list of {title, level, content}
-    returns list of {title, summary}
+    Summarize multiple sections in batches for better performance.
     """
     summarizer = get_summarizer()
-    results = []
+
+    # Prepare inputs
+    inputs = []
+    titles = []
     for s in sections:
         content = s.get("content", "") or ""
+        titles.append(s.get("title"))
         if not content.strip():
-            results.append({"title": s.get("title"), "summary": ""})
-            continue
-        # If content is very long, you may want to split into chunks to avoid truncation.
-        summary = summarize_text(content, max_length=per_section_max, min_length=30)
-        results.append({"title": s.get("title"), "summary": summary})
+            inputs.append(None)  # placeholder for empty
+        else:
+            inputs.append(content)
+
+    # Filter out None values before sending to model
+    batch_texts = [txt for txt in inputs if txt]
+
+    # Run summarizer in a single batch call
+    summaries = []
+    if batch_texts:
+        raw_summaries = summarizer(
+            batch_texts,
+            max_length=per_section_max,
+            min_length=30,
+            do_sample=False,
+            clean_up_tokenization_spaces=True
+        )
+        summaries = [r["summary_text"] for r in raw_summaries]
+
+    # Rebuild final list with correct order
+    results = []
+    summary_idx = 0
+    for i, content in enumerate(inputs):
+        if content is None:
+            results.append({"title": titles[i], "summary": ""})
+        else:
+            results.append({"title": titles[i], "summary": summaries[summary_idx]})
+            summary_idx += 1
+
     return results
+

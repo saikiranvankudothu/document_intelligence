@@ -17,7 +17,8 @@ export default function FlowchartView({ docId }) {
     setLoading(true);
     getFlowchart(docId)
       .then((res) => {
-        const code = res.mermaid || res.mermaid_code || res.chart || "";
+        // const code = res.mermaid || res.mermaid_code || res.chart || "";
+        const code = res.mermaid || "";
         setMermaidCode(code);
       })
       .catch((e) => {

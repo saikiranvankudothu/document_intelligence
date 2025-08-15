@@ -14,7 +14,7 @@ INDEX_DIR = os.path.join(BASE_DIR, "vectorstore")
 os.makedirs(INDEX_DIR, exist_ok=True)
 INDEX_PATH = os.path.join(INDEX_DIR, "faiss.index")
 META_PATH = os.path.join(INDEX_DIR, "meta.pkl")  # map id -> metadata
-
+DIM_PATH = os.path.join(INDEX_DIR, "dim.json")
 # lazy load
 _model = None
 _index = None
@@ -26,19 +26,6 @@ def get_model():
         _model = SentenceTransformer(EMB_MODEL)
     return _model
 
-def _init_index(dim: int):
-    global _index, _metadata
-    if _index is None:
-        if os.path.exists(INDEX_PATH):
-            _index = faiss.read_index(INDEX_PATH)
-        else:
-            # use IVF/Flat for larger collections; Flat L2 for simplicity
-            _index = faiss.IndexFlatIP(dim)  # normalized embeddings => use inner product
-        if os.path.exists(META_PATH):
-            with open(META_PATH, "rb") as f:
-                _metadata = pickle.load(f)
-        else:
-            _metadata = {}
 
 def save_index():
     global _index, _metadata
@@ -96,3 +83,39 @@ def clear_store():
         os.remove(META_PATH)
     _index = None
     _metadata = None
+
+def _init_index(dim: int):
+    global _index, _metadata
+    stored_dim = None
+    if os.path.exists(DIM_PATH):
+        try:
+            import json
+            with open(DIM_PATH, "r") as f:
+                stored_dim = json.load(f).get("dim")
+        except:
+            pass
+
+    if _index is None:
+        if os.path.exists(INDEX_PATH):
+            if stored_dim is not None and stored_dim != dim:
+                # dimension mismatch → reset
+                print(f"[WARN] FAISS index dim {stored_dim} != model dim {dim}. Recreating index.")
+                os.remove(INDEX_PATH)
+                os.remove(META_PATH) if os.path.exists(META_PATH) else None
+                _index = faiss.IndexFlatIP(dim)
+                _metadata = {}
+            else:
+                _index = faiss.read_index(INDEX_PATH)
+        else:
+            _index = faiss.IndexFlatIP(dim)
+
+        if os.path.exists(META_PATH):
+            with open(META_PATH, "rb") as f:
+                _metadata = pickle.load(f)
+        else:
+            _metadata = {}
+
+    # store current dim
+    with open(DIM_PATH, "w") as f:
+        import json
+        json.dump({"dim": dim}, f)

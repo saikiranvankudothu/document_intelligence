@@ -72,7 +72,9 @@ async def semantic_clusters(
     file: UploadFile = File(None),
     raw_text: Optional[str] = Body(default=None),
     min_cluster_size: int = 8,
-    min_samples: Optional[int] = None
+    min_samples: Optional[int] = None,
+    batch_size: int = 128,
+    max_sentences: Optional[int] = 2000
 ):
     """
     Semantic clustering for non-heading segmentation.
@@ -80,7 +82,7 @@ async def semantic_clusters(
     Returns clusters with sentences and keywords.
     """
     if file is None and not raw_text:
-        return {"error": "Provide a file or raw_text"}
+        raise HTTPException(status_code=400, detail="Provide a file or raw_text")
 
     if file is not None:
         file_bytes = await file.read()
@@ -94,22 +96,35 @@ async def semantic_clusters(
     if len(sents) < max(10, min_cluster_size):
         return {"warning": "Not enough sentences for clustering", "sentences": sents}
 
-    model = get_model()
-    emb = model.encode(sents, batch_size=64, convert_to_numpy=True, normalize_embeddings=True)
+    # Limit sentence count to avoid memory blow-up
+    if max_sentences and len(sents) > max_sentences:
+        sents = sents[:max_sentences]
 
-    clusterer = hdbscan.HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples or min_cluster_size//2,
-                                metric='euclidean', cluster_selection_method='eom')
+    model = get_model()
+    emb = model.encode(
+        sents,
+        batch_size=batch_size,
+        convert_to_numpy=True,
+        normalize_embeddings=True,
+        device="cuda" if torch.cuda.is_available() else "cpu"
+    )
+
+    clusterer = hdbscan.HDBSCAN(
+        min_cluster_size=min_cluster_size,
+        min_samples=min_samples or min_cluster_size // 2,
+        metric='euclidean',  # embeddings normalized → Euclidean = Cosine
+        cluster_selection_method='eom'
+    )
     labels = clusterer.fit_predict(emb)
 
     clusters: Dict[int, Dict[str, Any]] = {}
     for i, lab in enumerate(labels):
-        if lab == -1:  # noise
+        if lab == -1:
             continue
         clusters.setdefault(lab, {"sentences": [], "idx": []})
         clusters[lab]["sentences"].append(sents[i])
         clusters[lab]["idx"].append(i)
 
-    # Simple keywords per cluster via TF-IDF or fallback freq
     results = []
     for cid, data in sorted(clusters.items(), key=lambda kv: kv[0]):
         s_list = data["sentences"]
@@ -118,7 +133,6 @@ async def semantic_clusters(
         try:
             tfidf = TfidfVectorizer(max_features=2000, ngram_range=(1,2), stop_words="english")
             X = tfidf.fit_transform(s_list)
-            # top terms by mean tfidf
             scores = np.asarray(X.mean(axis=0)).ravel()
             terms = np.array(tfidf.get_feature_names_out())
             top_idx = np.argsort(-scores)[:8]
@@ -133,7 +147,4 @@ async def semantic_clusters(
             "sentences": s_list
         })
 
-    return {
-        "num_clusters": len(results),
-        "clusters": results
-    }
+    return {"num_clusters": len(results), "clusters": results}
