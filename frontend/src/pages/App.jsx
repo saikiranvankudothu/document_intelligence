@@ -19,7 +19,7 @@ export default function App() {
       <div className="layout">
         <aside className="left-col">
           <DocumentUpload
-            onUploaded={(doc) => setSelectedDoc(doc)}
+            onUploadComplete={(doc) => setSelectedDoc(doc)}
             setProcessing={setProcessing}
           />
           <hr />

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { uploadDocument } from "../api/documentApi";
 
-export default function DocumentUpload({ onUploadComplete }) {
+export default function DocumentUpload({ onUploadComplete, setProcessing }) {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
